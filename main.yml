@@ -110,7 +110,7 @@
       with_fileglob: "{{ schoolsite_install_location }}/schools/{{ acronym }}/config/*.yml"
 
     - name: "Install dependencies"
-      composer:
+      community.general.composer:
         command: install
         working_dir: "{{ schoolsite_install_location }}/drupal"
 
