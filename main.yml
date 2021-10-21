@@ -102,12 +102,19 @@
         src: templates/settings.php.j2
         dest: "{{ schoolsite_install_location }}/drupal/web/sites/default/settings.php"
 
+    - name: "Find config files"
+      find:
+        paths: "{{ schoolsite_install_location }}/schools/{{ acronym }}/config"
+        pattern: "*.yml"
+      register: config_ymls
+      changed_when: false
+
     - name: "Copy the config files"
       copy:
         remote_src: yes
-        src: "{{ item }}"
+        src: "{{ item.path }}"
         dest: "{{ schoolsite_install_location }}/drupal/config/sync/"
-      with_fileglob: "{{ schoolsite_install_location }}/schools/{{ acronym }}/config/*.yml"
+      with_items: "{{ config_ymls.files }}"
 
     - name: "Install dependencies"
       community.general.composer:
