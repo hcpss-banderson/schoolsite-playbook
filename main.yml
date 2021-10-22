@@ -3,73 +3,22 @@
   hosts: all
 
   vars:
-    acronym: aes
-    schoolsite_database_name: "{{ acronym }}"
-    schoolsite_database_username: "{{ acronym }}"
-    schoolsite_database_pass: "{{ acronym }}"
-    database_name: "{{ schoolsite_database_name }}"
-    database_user: "{{ schoolsite_database_username }}"
-    database_pass: "{{ schoolsite_database_pass }}"
-    schoolsite_acronym: "{{ acronym }}"
-    schoolsite_install_location: "/var/www/{{ schoolsite_acronym }}"
-    schoolsite_database_host: localhost
-    schoolsite_account_pass: admin
+    acronyms:
+      - fes
+      - ahs
+    # schoolsite_database_name: "{{ acronym }}"
+    # schoolsite_database_username: "{{ acronym }}"
+    # schoolsite_database_pass: "{{ acronym }}"
+    # database_name: "{{ schoolsite_database_name }}"
+    # database_user: "{{ schoolsite_database_username }}"
+    # database_pass: "{{ schoolsite_database_pass }}"
+    # schoolsite_acronym: "{{ acronym }}"
+    # schoolsite_install_location: "/var/www/{{ schoolsite_acronym }}"
+    # schoolsite_database_host: localhost
+    # schoolsite_account_pass: admin
 
   roles:
     - geerlingguy.git
-    - role: geerlingguy.nginx
-      vars:
-        nginx_vhosts:
-          - listen: "80"
-            server_name: "{{ acronym }}.hcpss.localhost"
-            root: "/var/www/{{ acronym }}/drupal/web"
-            index: "index.php index.html index.htm"
-            extra_parameters: |
-              location / {
-                  try_files $uri /index.php?$query_string; # For Drupal >= 7
-              }
-              location @rewrite {
-                  rewrite ^/(.*)$ /index.php?q=$1;
-              }
-              location ~ /vendor/.*\.php$ {
-                  deny all;
-                  return 404;
-              }
-              location ~ '\.php$|^/update.php' {
-                  fastcgi_split_path_info ^(.+\.php)(/.+)$;
-                  fastcgi_pass 127.0.0.1:9000;
-                  fastcgi_index index.php;
-                  fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-                  include fastcgi_params;
-              }
-              location ~ ^/sites/.*/files/styles/ {
-                  try_files $uri @rewrite;
-              }
-              # Handle private files through Drupal.
-              location ~ ^/system/files/ {
-                  try_files $uri /index.php?$query_string;
-              }
-              location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
-                  expires max;
-                  log_not_found off;
-              }
-              location ~ \.css {
-                  add_header  Content-Type    text/css;
-              }
-              location ~ \.js {
-                  add_header  Content-Type    application/x-javascript;
-              }
-    - role: geerlingguy.mysql
-      vars:
-        mysql_databases:
-          - name: "{{ database_name }}"
-            collation: utf8_general_ci
-            encoding: utf8
-        mysql_users:
-          - name: "{{ database_user }}"
-            host: localhost
-            password: "{{ database_pass }}"
-            priv: "*.*:ALL"
     - role: geerlingguy.php
       vars:
         php_memory_limit: "512M"
@@ -83,50 +32,35 @@
     - geerlingguy.drush
 
   tasks:
-    - name: 'Clone the schoolsite repo'
-      git:
-        repo: 'https://github.com/hcpss-banderson/schoolsite-skelleton.git'
-        dest: "{{ schoolsite_install_location }}"
-        force: yes
+    - include_role:
+        name: geerlingguy.mysql
+      vars:
+        mysql_databases:
+          - name: "{{ acronym }}"
+            collation: utf8_general_ci
+            encoding: utf8
+        mysql_users:
+          - name: "{{ acronym }}"
+            host: localhost
+            password: "{{ acronym }}"
+            priv: "*.*:ALL"
+      loop: "{{ acronyms }}"
+      loop_control:
+        loop_var: acronym
 
-    - name: "Create the files directory"
-      file:
-        path: "{{ schoolsite_install_location }}/drupal/web/sites/default/files"
-        owner: www-data
-        group: www-data
-        state: directory
-        mode: '0755'
+    - include_role:
+        name: geerlingguy.nginx
+      vars:
+        #nginx_vhost_template: "{{ playbook_dir }}/templates/school.hcpss.localhost.j2"
+        nginx_vhosts:
+          - server_name: "{{ acronym }}.hcpss.localhost"
+            filename: "{{ acronym }}.hcpss.localhost.conf"
+            template: "{{ playbook_dir }}/templates/school.hcpss.localhost.j2"
+      loop: "{{ acronyms }}"
+      loop_control:
+        loop_var: acronym
 
-    - name: "Create the settings file"
-      template:
-        src: templates/settings.php.j2
-        dest: "{{ schoolsite_install_location }}/drupal/web/sites/default/settings.php"
-
-    - name: "Find config files"
-      find:
-        paths: "{{ schoolsite_install_location }}/schools/{{ acronym }}/config"
-        pattern: "*.yml"
-      register: config_ymls
-      changed_when: false
-
-    - name: "Copy the config files"
-      copy:
-        remote_src: yes
-        src: "{{ item.path }}"
-        dest: "{{ schoolsite_install_location }}/drupal/config/sync/"
-      with_items: "{{ config_ymls.files }}"
-
-    - name: "Install dependencies"
-      community.general.composer:
-        command: install
-        working_dir: "{{ schoolsite_install_location }}/drupal"
-
-    - name: "Install drupal"
-      command: "drush --root={{ schoolsite_install_location }}/drupal si -y --existing-config --account-pass={{ schoolsite_account_pass }}"
-
-    - name: "Import drupal configuration"
-      command: "drush --root={{ schoolsite_install_location }}/drupal cim -y"
-
-    - name: "Import content"
-      command: "drush --root={{ schoolsite_install_location }}/drupal content-snapshot:import -y --snapshot-path={{ schoolsite_install_location }}/schools/{{ schoolsite_acronym }}/content"
-
+    - include_tasks: schoolsite.yml
+      with_items: "{{ acronyms }}"
+      loop_control:
+        loop_var: acronym

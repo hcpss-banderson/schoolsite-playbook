@@ -14,13 +14,13 @@ $settings['entity_update_backup'] = TRUE;
 $settings['migrate_node_migrate_type_classic'] = FALSE;
 
 $databases['default']['default'] = array (
-  'database' => '{{ schoolsite_database_name }}',
-  'username' => '{{ schoolsite_database_username }}',
-  'password' => '{{ schoolsite_database_pass }}',
+  'database' => '{{ acronym }}',
+  'username' => '{{ acronym }}',
+  'password' => '{{ acronym }}',
   'prefix' => '',
-  'host' => '{{ schoolsite_database_host }}',
+  'host' => 'localhost',
   'port' => '3306',
   'namespace' => 'Drupal\\Core\\Database\\Driver\\mysql',
   'driver' => 'mysql',
 );
-$settings['config_sync_directory'] = '{{ schoolsite_install_location }}/drupal/config/sync';
+$settings['config_sync_directory'] = '/var/www/{{ acronym }}/drupal/config/sync';
