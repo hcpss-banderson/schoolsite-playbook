@@ -3,9 +3,9 @@
   hosts: all
 
   vars:
-    acronyms:
-      - fes
-      - ahs
+    # acronyms:
+    #   - fes
+    #   - ahs
     # schoolsite_database_name: "{{ acronym }}"
     # schoolsite_database_username: "{{ acronym }}"
     # schoolsite_database_pass: "{{ acronym }}"
